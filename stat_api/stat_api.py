@@ -2,7 +2,7 @@ import time
 
 import requests
 
-from helpers import tidy_dates
+from .helpers import tidy_dates
 
 ENDPOINTS_DATA = {
     # projects
