@@ -1,1 +1,1 @@
-from stat_api import *
+from .stat_api import *
