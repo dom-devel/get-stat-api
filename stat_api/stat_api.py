@@ -7,35 +7,48 @@ from .helpers import tidy_dates
 ENDPOINTS_DATA = {
     # projects
     "/projects/list": (),
-    "/projects/create": ("name"),
+    "/projects/create": ("name",),
     "/projects/update": ("id", "name"),
-    "/projects/delete": ("id"),
+    "/projects/delete": ("id",),
     # sites
-    "/sites/all": ("results"),
-    "/sites/list": ("project_id"),
+    "/sites/all": ("results",),
+    "/sites/list": ("project_id",),
     "/sites/ranking_distributions": ("id", "from_date", "to_date"),
     "/sites/create": ("project_id", "url", "drop_www_prefix", "drop_directories"),
     "/sites/update": ("id", "url", "title", "drop_www_prefix", "drop_directories"),
-    "/sites/delete": ("id"),
+    "/sites/delete": ("id",),
     # tags
     "/tags/list": ("site_id", "results"),
     "/tags/ranking_distributions": ("id", "from_date", "to_date"),
     # keywords
     "/keywords/list": ("site_id", "results"),
-    "/keywords/create": ("site_id", "market", "location", "device", "type",
-                         "keyword", "tag", "tag_color"),
-    "/keywords/delete": ("id"),
+    "/keywords/create": (
+        "site_id",
+        "market",
+        "location",
+        "device",
+        "type",
+        "keyword",
+        "tag",
+        "tag_color",
+    ),
+    "/keywords/delete": ("id",),
     # rankings
     "/rankings/list": ("keyword_id", "from_date", "to_date"),
     # serps
     "/serps/show": ("keyword_id", "engine", "date"),
     # bulk jobs
-    "/bulk/list": ("results"),
-    "/bulk/ranks": ("date", "site_id", "currently_tracked_only", "crawled_keywords_only"),
-    "/bulk/status": ("id"),
-    "/bulk/delete": ("id"),
-    "/bulk/site_ranking_distributions": ("date"),
-    "/bulk/tag_ranking_distributions": ("date"),
+    "/bulk/list": ("results",),
+    "/bulk/ranks": (
+        "date",
+        "site_id",
+        "currently_tracked_only",
+        "crawled_keywords_only",
+    ),
+    "/bulk/status": ("id",),
+    "/bulk/delete": ("id",),
+    "/bulk/site_ranking_distributions": ("date",),
+    "/bulk/tag_ranking_distributions": ("date",),
 }
 
 
@@ -93,10 +106,10 @@ class Stat(object):
             raise StatRequestError("Internal Server Error")
 
         response_data = r.json()
-        if 'Response' not in response_data:
-            raise StatResponseError(response_data['Result'])
+        if "Response" not in response_data:
+            raise StatResponseError(response_data["Result"])
 
-        return r.json()['Response']
+        return r.json()["Response"]
 
     def request(self, endpoint, **kwargs):
         """ Make a request to the getstat.com API
@@ -105,20 +118,25 @@ class Stat(object):
         kawrgs should be a dictionary of query parameters for the request
         """
         if endpoint not in ENDPOINTS_DATA.keys():
-            raise StatInvalidEndpoint("The endpoint {endpoint} does not exist".format(endpoint))
+            raise StatInvalidEndpoint(
+                "The endpoint {endpoint} does not exist".format(endpoint)
+            )
 
-        allowed_parameters = [*ENDPOINTS_DATA[endpoint], "start"]
+        allowed_parameters = list(ENDPOINTS_DATA[endpoint]) + ["start"]
 
-        illegal_paramters = [key for key in kwargs.keys()
-                             if key not in allowed_parameters]
+        illegal_paramters = [
+            key for key in kwargs.keys() if key not in allowed_parameters
+        ]
         if illegal_paramters:
-            raise InvalidParameters("The parameter(s) {parameters} are not legal"
-                                    " for the endpoint `{endpoint}`".format(
-                                        parameters=illegal_paramters,
-                                        endpoint=endpoint))
+            raise InvalidParameters(
+                "The parameter(s) {parameters} are not legal"
+                " for the endpoint `{endpoint}`".format(
+                    parameters=illegal_paramters, endpoint=endpoint
+                )
+            )
 
         url = self._make_api_request_url(endpoint)
-        kwargs.update({'format': 'json'})
+        kwargs.update({"format": "json"})
         kwargs = tidy_dates(kwargs)
 
         return self._do_request(url, kwargs)
@@ -138,13 +156,16 @@ class Stat(object):
         """ Return the status of a job """
 
         params = {"id": job_id}
-        return self.request("/bulk/status", **params)['Result']['Status']
+        return self.request("/bulk/status", **params)["Result"]["Status"]
 
     def is_job_done(self, job_id):
         """ Has a job finished executing and the report is ready """
 
-        return self.get_job_status(job_id) == 'Completed'
+        return self.get_job_status(job_id) == "Completed"
 
+    # 8748
+    # 5000
+    #
     def get_all_results(self, endpoint, **kwargs):
         result_output = []
 
@@ -153,16 +174,19 @@ class Stat(object):
 
         # Store how far we've got
         result_counter = 0
-        result_counter += int(response['resultsreturned'])
+        result_counter += int(response["resultsreturned"])
 
         # Append results onto the end.
         result_output.extend(response["Result"])
 
         # Do we need to paginate any more?
-        while int(response['totalresults']) > result_counter:
-            response_paginated = self.request(endpoint, start=result_counter,**kwargs)
+
+        while int(response["totalresults"]) > result_counter:
+            response_paginated = self.request(endpoint, start=result_counter, **kwargs)
+
             result_output.extend(response_paginated["Result"])
-            result_counter += int(response_paginated['resultsreturned'])
+
+            result_counter += int(response_paginated["resultsreturned"])
 
         return result_output
 
@@ -178,10 +202,12 @@ class StatBulkJob(object):
         """ Make a job and return the Id associated with it """
 
         result = self.stat.request(endpoint, **kwargs)
-        job_id = result['Result']['Id']
+        job_id = result["Result"]["Id"]
         return job_id
 
-    def create_job_and_wait_for_result(self, endpoint, time_interval=5, max_retries=5, **kwargs):
+    def create_job_and_wait_for_result(
+        self, endpoint, time_interval=5, max_retries=5, **kwargs
+    ):
         """ Make a job and wait for the result (by polling for the job status)
 
         Optionally, set the length of the period to wait between checking if
