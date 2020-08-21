@@ -108,6 +108,7 @@ class Stat(object):
             raise StatInvalidEndpoint("The endpoint {endpoint} does not exist".format(endpoint))
 
         allowed_parameters = [*ENDPOINTS_DATA[endpoint], "start"]
+
         illegal_paramters = [key for key in kwargs.keys()
                              if key not in allowed_parameters]
         if illegal_paramters:
@@ -164,7 +165,6 @@ class Stat(object):
             result_counter += int(response_paginated['resultsreturned'])
 
         return result_output
-
 
 
 class StatBulkJob(object):
